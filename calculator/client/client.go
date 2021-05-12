@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"math/rand"
 	"time"
@@ -25,6 +26,8 @@ func main() {
 	// fmt.Printf("Client created: %f", client)
 
 	runUnary(client)
+
+	runServerStream(client)
 }
 
 func runUnary(client calculatorpb.CaculatorServiceClient) {
@@ -45,4 +48,29 @@ func runUnary(client calculatorpb.CaculatorServiceClient) {
 		log.Fatalf("Error calling Sum RPC: %v", err)
 	}
 	log.Printf("Response from Sum: %v", res.Result)
+}
+
+func runServerStream(client calculatorpb.CaculatorServiceClient) {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	num := r.Int63() % 100
+	fmt.Printf("Calling a Server stream RPC with {%v}...\n", num)
+	req := &calculatorpb.PrimeNumberDecompositionRequest{
+		Number: num,
+	}
+
+	stream, err := client.PrimeNumberDecomposition(context.Background(), req)
+	if err != nil {
+		log.Fatalf("Error calling Prime Number Decomposition RPC: %v", err)
+	}
+	for {
+		res, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatalf("Unexpected error occured during server streaming...")
+		}
+		// parse response
+		log.Printf("Response from Prime Number Decomposition RPC: %v", res.GetPrimeFactor())
+	}
 }
