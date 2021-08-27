@@ -25,9 +25,11 @@ func main() {
 	client := calculatorpb.NewCaculatorServiceClient(conn)
 	// fmt.Printf("Client created: %f", client)
 
-	runUnary(client)
+	// runUnary(client)
 
-	runServerStream(client)
+	// runServerStream(client)
+
+	runClientStream(client)
 }
 
 func runUnary(client calculatorpb.CaculatorServiceClient) {
@@ -73,4 +75,34 @@ func runServerStream(client calculatorpb.CaculatorServiceClient) {
 		// parse response
 		log.Printf("Response from Prime Number Decomposition RPC: %v", res.GetPrimeFactor())
 	}
+}
+
+func runClientStream(client calculatorpb.CaculatorServiceClient) {
+	size := 5
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	
+	requests := []*calculatorpb.AverageRequest{}
+	for i := 0; i < size; i++ {
+		requests = append(requests, &calculatorpb.AverageRequest{
+			Value: int64(r.Int31()),
+		})
+	}
+	fmt.Printf("Calling a Client stream RPC with {%v}...\n", requests)
+
+	stream, err := client.Average(context.Background())
+	if err != nil {
+		log.Fatalf("Error calling Average: %v\n", err)
+	}
+
+	for _, req := range requests {
+		fmt.Printf("Sending req: %v\n", req)
+		stream.Send(req)
+		time.Sleep(1000 * time.Millisecond)
+	}
+
+	res, err := stream.CloseAndRecv()
+	if err != nil {
+		log.Fatalf("Error receiving Average response: %v\n", err)
+	}
+	fmt.Printf("Average response: %v\n", res.Result)
 }
