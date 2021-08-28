@@ -29,7 +29,9 @@ func main() {
 
 	// runServerStream(client)
 
-	runClientStream(client)
+	// runClientStream(client)
+
+	runBidirectionalStream(client)
 }
 
 func runUnary(client calculatorpb.CaculatorServiceClient) {
@@ -80,7 +82,7 @@ func runServerStream(client calculatorpb.CaculatorServiceClient) {
 func runClientStream(client calculatorpb.CaculatorServiceClient) {
 	size := 5
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	
+
 	requests := []*calculatorpb.AverageRequest{}
 	for i := 0; i < size; i++ {
 		requests = append(requests, &calculatorpb.AverageRequest{
@@ -105,4 +107,53 @@ func runClientStream(client calculatorpb.CaculatorServiceClient) {
 		log.Fatalf("Error receiving Average response: %v\n", err)
 	}
 	fmt.Printf("Average response: %v\n", res.Result)
+}
+
+func runBidirectionalStream(client calculatorpb.CaculatorServiceClient) {
+	size := 5
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	requests := []*calculatorpb.MaxRequest{}
+	for i := 0; i < size; i++ {
+		requests = append(requests, &calculatorpb.MaxRequest{
+			Value: r.Int63(),
+		})
+	}
+	fmt.Printf("Calling a Bi-directional stream RPC with {%v}...\n", requests)
+
+	// create stream
+	stream, err := client.Max(context.Background())
+	if err != nil {
+		log.Fatalf("Error calling Max: %v\n", err)
+	}
+
+	waitCh := make(chan struct{})
+	// send messages async
+	go func() {
+		for _, req := range requests {
+			fmt.Printf("Sending req: %v\n", req)
+			stream.Send(req)
+			time.Sleep(1000 * time.Millisecond)
+		}
+		stream.CloseSend()
+	}()
+
+	// receive message async
+	go func() {
+		for {
+			res, err := stream.Recv()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				log.Fatalf("Error while receiving: %v", err)
+				break
+			}
+			fmt.Printf("Received : %v\n", res.GetResult())
+		}
+		close(waitCh)
+	}()
+
+	// block until done
+	<-waitCh
 }

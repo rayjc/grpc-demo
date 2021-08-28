@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net"
 
 	"github.com/rayjc/grpc-demo/calculator/calculatorpb"
@@ -69,6 +70,37 @@ func (*server) Average(stream calculatorpb.CaculatorService_AverageServer) error
 
 		total += req.GetValue()
 		count++
+	}
+}
+
+func (*server) Max(stream calculatorpb.CaculatorService_MaxServer) error {
+	fmt.Println("Max is called.")
+	var currMax int64 = math.MinInt64
+
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			return nil
+		}
+
+		if err != nil {
+			log.Fatalf("Error while reading client stream: %v", err)
+			return err
+		}
+
+		val := req.GetValue()
+		if val > currMax {
+			currMax = val
+		}
+
+		err = stream.Send(&calculatorpb.MaxResponse{
+			Result: currMax,
+		})
+
+		if err != nil {
+			log.Fatalf("Error while sending data to client: %v", err)
+			return err
+		}
 	}
 }
 
