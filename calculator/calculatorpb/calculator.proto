@@ -35,6 +35,14 @@ message MaxResponse {
     int64 result = 1;
 }
 
+message SquareRootRequest {
+    int32 number = 1;
+}
+
+message SquareRootResponse {
+    double result = 1;
+}
+
 service CaculatorService{
     // Unary
     rpc Sum(SumRequest) returns (SumResponse) {};
@@ -45,4 +53,8 @@ service CaculatorService{
     rpc Average(stream AverageRequest) returns (AverageResponse) {};
     // Bi-directional stream
     rpc Max(stream MaxRequest) returns (stream MaxResponse) {};
+
+    // error handling
+    // throws INVALID_ARGUMENT error if input is negative
+    rpc SquareRoot(SquareRootRequest) returns (SquareRootResponse) {};
 }

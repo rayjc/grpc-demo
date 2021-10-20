@@ -10,6 +10,8 @@ import (
 
 	"github.com/rayjc/grpc-demo/calculator/calculatorpb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func main() {
@@ -31,7 +33,9 @@ func main() {
 
 	// runClientStream(client)
 
-	runBidirectionalStream(client)
+	// runBidirectionalStream(client)
+
+	runErrorUnary(client)
 }
 
 func runUnary(client calculatorpb.CaculatorServiceClient) {
@@ -156,4 +160,30 @@ func runBidirectionalStream(client calculatorpb.CaculatorServiceClient) {
 
 	// block until done
 	<-waitCh
+}
+
+func runErrorUnary(c calculatorpb.CaculatorServiceClient) {
+	runUnary := func(num int) {
+		res, err := c.SquareRoot(context.Background(), &calculatorpb.SquareRootRequest{Number: int32(num)})
+		fmt.Printf("Calling Square Root: %v\n", num)
+	
+		if err != nil {
+			resErr, ok := status.FromError(err)
+			if ok {
+				// known user/input error
+				fmt.Println(resErr.Message())
+				fmt.Println(resErr.Code())
+				if resErr.Code() == codes.InvalidArgument {
+					fmt.Println("Error: input must be positive.")
+					return
+				}
+			} else {
+				log.Fatalf("Server error...")
+			}
+		}
+		fmt.Printf("Received: %v\n", res.GetResult())
+	}
+
+	runUnary(10)
+	runUnary(-2)
 }
