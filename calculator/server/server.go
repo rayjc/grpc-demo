@@ -11,6 +11,7 @@ import (
 	"github.com/rayjc/grpc-demo/calculator/calculatorpb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 )
 
@@ -129,6 +130,7 @@ func main() {
 	}
 
 	s := grpc.NewServer()
+	reflection.Register(s)
 	calculatorpb.RegisterCaculatorServiceServer(s, &server{})
 	if err := s.Serve(listener); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
